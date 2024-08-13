@@ -6,7 +6,7 @@ import (
     "log"
     "net/http"
     "os"
-    git add .
+
     "cloud.google.com/go/compute/metadata"
     "cloud.google.com/go/vertexai/genai"
 )
