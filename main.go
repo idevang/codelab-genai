@@ -2,8 +2,10 @@ package main
 
 import (
     "context"
+    "encoding/json"
     "fmt"
     "log"
+    "log/slog"
     "net/http"
     "os"
 
@@ -28,7 +30,21 @@ func main() {
         return
     }
     defer client.Close()
+    opts := &slog.HandlerOptions{
+        Level: slog.LevelDebug,
+        ReplaceAttr: func(group []string, a slog.Attr) slog.Attr {
+        if a.Key == slog.LevelKey {
+            return slog.Attr{Key: "severity", Value: a.Value}
+        }
+        if a.Key == slog.MessageKey {
+            return slog.Attr{Key: "message", Value: a.Value}
+        }
+        return slog.Attr{Key: a.Key, Value: a.Value}
+        },
+}
 
+jsonHandler := slog.NewJSONHandler(os.Stdout, opts)
+slog.SetDefault(slog.New(jsonHandler))
     model := client.GenerativeModel("gemini-1.5-flash-001")
 
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -47,6 +63,14 @@ func main() {
             w.WriteHeader(http.StatusServiceUnavailable)
             return
         }
+        
+        jsonBytes, err := json.Marshal(resp)
+        if err != nil {
+        slog.Error("Failed to marshal response to JSON", "error", err)
+        } else {
+    jsonString := string(jsonBytes)
+    slog.Debug("Complete response content", "json_response", jsonString)
+}
 
         if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
             htmlContent := resp.Candidates[0].Content.Parts[0]
